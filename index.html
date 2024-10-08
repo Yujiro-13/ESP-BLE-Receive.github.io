@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BLE Data Receiver</title>
+</head>
+<body>
+    <h1>ESP32 BLE Data Receiver</h1>
+    <button id="connect">Connect to ESP32</button>
+    <div id="status">Status: Disconnected</div>
+    <pre id="data">Received Data: </pre>
+    
+    <script>
+        // ESP32のサービスUUIDとキャラクタリスティックUUIDを設定
+        const SERVICE_UUID = '12345678-1234-5678-1234-56789abcdef0';
+        const CHARACTERISTIC_UUID = '12345678-1234-5678-1234-56789abcdef1';
+
+        let characteristic;
+        let receivedData = '';
+
+        document.getElementById('connect').addEventListener('click', async () => {
+            try {
+                // 1. ユーザーがBLEデバイスを選択
+                const device = await navigator.bluetooth.requestDevice({
+                    filters: [{ services: [SERVICE_UUID] }]
+                });
+
+                // 2. デバイス接続とGATTサーバーの取得
+                const server = await device.gatt.connect();
+                document.getElementById('status').textContent = 'Status: Connected';
+
+                // 3. サービスの取得
+                const service = await server.getPrimaryService(SERVICE_UUID);
+
+                // 4. キャラクタリスティックの取得
+                characteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
+
+                // 5. キャラクタリスティックの通知を開始
+                await characteristic.startNotifications();
+                characteristic.addEventListener('characteristicvaluechanged', handleCharacteristicValueChanged);
+                
+                console.log('Connected to the BLE device and started notifications.');
+            } catch (error) {
+                console.error('Failed to connect or retrieve characteristics: ', error);
+                document.getElementById('status').textContent = 'Status: Failed to connect';
+            }
+        });
+
+        // データ受信時のイベントハンドラ
+        function handleCharacteristicValueChanged(event) {
+            const value = event.target.value;
+            
+            // 受信データを文字列として読み取る
+            let receivedText = '';
+            for (let i = 0; i < value.byteLength; i++) {
+                receivedText += String.fromCharCode(value.getUint8(i));
+            }
+
+            // コンソールに表示し、ページの要素に受信データを追加
+            console.log('Received:', receivedText);
+            receivedData += receivedText;
+            document.getElementById('data').textContent = `Received Data: ${receivedData}`;
+        }
+    </script>
+</body>
+</html>
