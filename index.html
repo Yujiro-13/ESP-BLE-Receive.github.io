@@ -6,37 +6,46 @@
     <title>BLE Data Receiver</title>
 </head>
 <body>
-    <h1>ESP32 BLE Data Receiver</h1>
-    <button id="connect">Connect to ESP32</button>
+    <h1>BLE Data Receiver</h1>
+    <button id="connect">Connect to BLE Device</button>
     <div id="status">Status: Disconnected</div>
     <pre id="data">Received Data: </pre>
     
     <script>
-        // ESP32のサービスUUIDとキャラクタリスティックUUIDを設定
-        const SERVICE_UUID = '12345678-1234-5678-1234-56789abcdef0';
-        const CHARACTERISTIC_UUID = '12345678-1234-5678-1234-56789abcdef1';
-
         let characteristic;
         let receivedData = '';
 
         document.getElementById('connect').addEventListener('click', async () => {
             try {
-                // 1. ユーザーがBLEデバイスを選択
+                // 1. ユーザーが周囲のBLEデバイスを選択できるようにする（フィルタを使用しない）
                 const device = await navigator.bluetooth.requestDevice({
-                    filters: [{ services: [SERVICE_UUID] }]
+                    acceptAllDevices: true,  // 全てのBLEデバイスを検索対象にする
+                    optionalServices: []     // サービスUUIDのフィルタを指定しない
                 });
 
                 // 2. デバイス接続とGATTサーバーの取得
                 const server = await device.gatt.connect();
-                document.getElementById('status').textContent = 'Status: Connected';
+                document.getElementById('status').textContent = `Status: Connected to ${device.name}`;
 
-                // 3. サービスの取得
-                const service = await server.getPrimaryService(SERVICE_UUID);
+                // 3. デバイスのすべてのサービスを取得
+                const services = await server.getPrimaryServices();
+                
+                // 4. 取得したサービスとキャラクタリスティックを表示（デバッグ用）
+                console.log('Available services:');
+                for (const service of services) {
+                    console.log(`Service UUID: ${service.uuid}`);
+                    const characteristics = await service.getCharacteristics();
+                    for (const char of characteristics) {
+                        console.log(`Characteristic UUID: ${char.uuid}`);
+                    }
+                }
 
-                // 4. キャラクタリスティックの取得
-                characteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
+                // 5. サービスとキャラクタリスティックを手動で指定するか、1つ目のキャラクタリスティックを使用する
+                // サービスとキャラクタリスティックがわかっている場合は、UUIDを指定して取得することも可能
+                const selectedService = services[0];  // 例: 最初に見つかったサービスを選択
+                characteristic = await selectedService.getCharacteristics()[0];  // 例: 最初のキャラクタリスティックを使用
 
-                // 5. キャラクタリスティックの通知を開始
+                // 6. キャラクタリスティックの通知を開始
                 await characteristic.startNotifications();
                 characteristic.addEventListener('characteristicvaluechanged', handleCharacteristicValueChanged);
                 
