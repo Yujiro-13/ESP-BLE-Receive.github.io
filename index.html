@@ -15,46 +15,59 @@
         let characteristic;
         let receivedData = '';
 
+        // 提示されたコードに基づいて、サービスの設定を追加
+        const serviceUuidList = {
+            "1800": "Generic Access",
+            "1801": "Generic Attribute",
+            // ここに必要なサービスUUIDを追加できます
+        };
+
+        // ユーザーが追加のサービスを設定できるようにする（デフォルトは空）
+        let additional_services = [];
+        let optionalServices = additional_services.concat(Object.keys(serviceUuidList).map(x => parseInt(x)));
+
         document.getElementById('connect').addEventListener('click', async () => {
             try {
-                // 1. ユーザーが周囲のBLEデバイスを選択できるようにする（フィルタを使用しない）
+                console.log('Execute : requestDevice');
+                
+                // BLEデバイスの選択と接続
                 const device = await navigator.bluetooth.requestDevice({
                     acceptAllDevices: true,  // 全てのBLEデバイスを検索対象にする
-                    optionalServices: []     // サービスUUIDのフィルタを指定しない
+                    optionalServices: optionalServices  // 提示されたコードのoptionalServices設定を反映
                 });
-
-                // 2. デバイス接続とGATTサーバーの取得
+                
+                console.log('Connecting to GATT Server...');
                 const server = await device.gatt.connect();
                 document.getElementById('status').textContent = `Status: Connected to ${device.name}`;
-
-                // 3. デバイスのすべてのサービスを取得
-                const services = await server.getPrimaryServices();
                 
-                // 4. 取得したサービスとキャラクタリスティックを表示（デバッグ用）
-                console.log('Available services:');
-                for (const service of services) {
-                    console.log(`Service UUID: ${service.uuid}`);
-                    const characteristics = await service.getCharacteristics();
-                    for (const char of characteristics) {
-                        console.log(`Characteristic UUID: ${char.uuid}`);
-                    }
-                }
+                console.log('Execute : getPrimaryServices');
+                const services = await server.getPrimaryServices();
+                console.log(services);
 
-                // 5. サービスとキャラクタリスティックを手動で指定するか、1つ目のキャラクタリスティックを使用する
-                // サービスとキャラクタリスティックがわかっている場合は、UUIDを指定して取得することも可能
+                // 最初のサービスとキャラクタリスティックを使用（適宜UUID指定を行ってください）
                 const selectedService = services[0];  // 例: 最初に見つかったサービスを選択
                 characteristic = await selectedService.getCharacteristics()[0];  // 例: 最初のキャラクタリスティックを使用
-
-                // 6. キャラクタリスティックの通知を開始
-                await characteristic.startNotifications();
-                characteristic.addEventListener('characteristicvaluechanged', handleCharacteristicValueChanged);
                 
+                // キャラクタリスティックの通知を開始
+                await notify_enable(characteristic);
                 console.log('Connected to the BLE device and started notifications.');
             } catch (error) {
                 console.error('Failed to connect or retrieve characteristics: ', error);
                 document.getElementById('status').textContent = 'Status: Failed to connect';
             }
         });
+
+        // 提示されたコードに基づく関数を追加
+        async function notify_enable(characteristic, forceEnable = false) {
+            if (characteristic.notify_enabled && !forceEnable) {
+                characteristic.characteristic.stopNotifications();
+                console.log('Notifications stopped.');
+            } else {
+                characteristic.characteristic.startNotifications();
+                console.log('Notifications started.');
+                characteristic.addEventListener('characteristicvaluechanged', handleCharacteristicValueChanged);
+            }
+        }
 
         // データ受信時のイベントハンドラ
         function handleCharacteristicValueChanged(event) {
@@ -71,6 +84,32 @@
             receivedData += receivedText;
             document.getElementById('data').textContent = `Received Data: ${receivedData}`;
         }
+
+        // 値を読み取る関数（提示されたコードを参考に）
+        async function value_read(characteristic) {
+            try {
+                await characteristic.readValue();
+                console.log('Value read successfully.');
+            } catch (error) {
+                console.error('Failed to read value:', error);
+            }
+        }
+
+        // 値を書き込む関数（提示されたコードを参考に）
+        async function value_write(characteristic) {
+            try {
+                const array = new Uint8Array([/* 書き込むデータをここに追加 */]);
+                if (characteristic.properties.writeWithoutResponse) {
+                    await characteristic.writeValueWithoutResponse(array);
+                } else {
+                    await characteristic.writeValueWithResponse(array);
+                }
+                console.log('Value written successfully.');
+            } catch (error) {
+                console.error('Failed to write value:', error);
+            }
+        }
+
     </script>
 </body>
 </html>
