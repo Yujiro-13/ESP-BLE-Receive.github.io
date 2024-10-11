@@ -8,6 +8,8 @@
 <body>
     <h1>BLE Data Receiver</h1>
     <button id="connect">Connect to BLE Device</button>
+    <button id="read">Read from BLE Device</button>
+    <button id="write">Write to BLE Device</button>
     <div id="status">Status: Disconnected</div>
     <pre id="data">Received Data: </pre>
     
@@ -107,6 +109,41 @@
             receivedData += receivedText;
             document.getElementById('data').textContent = `Received Data: ${receivedData}`;
         }
+
+        // デバイスから読み取る処理
+        document.getElementById('read').addEventListener('click', async () => {
+            try {
+                if (characteristic && characteristic.properties.read) {
+                    const value = await characteristic.readValue();
+                    let receivedText = '';
+                    for (let i = 0; i < value.byteLength; i++) {
+                        receivedText += String.fromCharCode(value.getUint8(i));
+                    }
+                    console.log('Read Value:', receivedText);
+                    document.getElementById('data').textContent = `Read Data: ${receivedText}`;
+                } else {
+                    console.warn('Characteristic does not support reading.');
+                }
+            } catch (error) {
+                console.error('Failed to read characteristic:', error);
+            }
+        });
+
+        // デバイスに書き込む処理
+        document.getElementById('write').addEventListener('click', async () => {
+            try {
+                if (characteristic && characteristic.properties.write) {
+                    const encoder = new TextEncoder();
+                    const writeValue = encoder.encode('Hello ESP32');
+                    await characteristic.writeValue(writeValue);
+                    console.log('Written Value: Hello ESP32');
+                } else {
+                    console.warn('Characteristic does not support writing.');
+                }
+            } catch (error) {
+                console.error('Failed to write characteristic:', error);
+            }
+        });
     </script>
 </body>
 </html>
