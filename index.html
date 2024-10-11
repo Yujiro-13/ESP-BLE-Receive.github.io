@@ -19,14 +19,13 @@
         let device;
         let server;
 
-        const serviceUuid = 0x00FF; // ESP32側で設定したサービスUUID
-        const characteristicUuid = 0xFF01; // ESP32側で設定したキャラクタリスティックUUID
+        const serviceUuid = '0000ff00-0000-1000-8000-00805f9b34fb'; // 修正されたサービスUUID
+        const characteristicUuid = '0000ff01-0000-1000-8000-00805f9b34fb'; // 修正されたキャラクタリスティックUUID
 
         document.getElementById('connect').addEventListener('click', async () => {
             try {
                 document.getElementById('status').textContent = 'Status: Searching for devices...';
 
-                // デバイスに接続
                 device = await navigator.bluetooth.requestDevice({
                     acceptAllDevices: true,
                     optionalServices: [serviceUuid]
@@ -45,7 +44,6 @@
                 characteristic = await service.getCharacteristic(characteristicUuid);
                 console.log('Characteristic:', characteristic);
 
-                // 通知の有効化
                 if (characteristic.properties.notify) {
                     await characteristic.startNotifications();
                     characteristic.addEventListener('characteristicvaluechanged', handleCharacteristicValueChanged);
@@ -59,7 +57,6 @@
             }
         });
 
-        // 読み取りボタンのイベント
         document.getElementById('read').addEventListener('click', async () => {
             try {
                 if (characteristic.properties.read) {
@@ -72,7 +69,6 @@
             }
         });
 
-        // 書き込みボタンのイベント
         document.getElementById('write').addEventListener('click', async () => {
             try {
                 const textEncoder = new TextEncoder();
@@ -86,7 +82,6 @@
             }
         });
 
-        // 通知受信時の処理
         function handleCharacteristicValueChanged(event) {
             const value = event.target.value;
             let receivedText = '';
