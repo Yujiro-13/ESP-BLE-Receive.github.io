@@ -33,11 +33,18 @@
                 });
 
                 document.getElementById('status').textContent = `Status: Connecting to ${device.name}`;
+                console.log(`Device Name: ${device.name}`);
+                console.log(`Device ID: ${device.id}`);
+
                 server = await device.gatt.connect();
+                console.log('Connected to GATT Server');
 
                 const service = await server.getPrimaryService(serviceUuid);
+                console.log('Primary Service:', service);
+
                 characteristic = await service.getCharacteristic(characteristicUuid);
-                
+                console.log('Characteristic:', characteristic);
+
                 // 通知の有効化
                 if (characteristic.properties.notify) {
                     await characteristic.startNotifications();
@@ -54,19 +61,28 @@
 
         // 読み取りボタンのイベント
         document.getElementById('read').addEventListener('click', async () => {
-            if (characteristic.properties.read) {
-                const value = await characteristic.readValue();
-                handleCharacteristicValueChanged({ target: { value } });
+            try {
+                if (characteristic.properties.read) {
+                    const value = await characteristic.readValue();
+                    handleCharacteristicValueChanged({ target: { value } });
+                    console.log('Data read successfully');
+                }
+            } catch (error) {
+                console.error('Failed to read data:', error);
             }
         });
 
         // 書き込みボタンのイベント
         document.getElementById('write').addEventListener('click', async () => {
-            const textEncoder = new TextEncoder();
-            const writeValue = textEncoder.encode('Hello ESP32');
-            if (characteristic.properties.write) {
-                await characteristic.writeValue(writeValue);
-                console.log('Data written:', 'Hello ESP32');
+            try {
+                const textEncoder = new TextEncoder();
+                const writeValue = textEncoder.encode('Hello ESP32');
+                if (characteristic.properties.write) {
+                    await characteristic.writeValue(writeValue);
+                    console.log('Data written:', 'Hello ESP32');
+                }
+            } catch (error) {
+                console.error('Failed to write data:', error);
             }
         });
 
