@@ -8,142 +8,79 @@
 <body>
     <h1>BLE Data Receiver</h1>
     <button id="connect">Connect to BLE Device</button>
-    <button id="read">Read from BLE Device</button>
-    <button id="write">Write to BLE Device</button>
+    <button id="read">Read from Characteristic</button>
+    <button id="write">Write to Characteristic</button>
     <div id="status">Status: Disconnected</div>
     <pre id="data">Received Data: </pre>
     
     <script>
         let characteristic;
         let receivedData = '';
-        let device; // デバイスをグローバルに管理
-        let server; // GATTサーバーをグローバルに管理
+        let device;
+        let server;
 
-        // サービスUUIDの設定
-        const serviceUuidList = {
-            "1800": "Generic Access",
-            "1801": "Generic Attribute",
-            // ここに必要なサービスUUIDを追加できます
-        };
-
-        // ユーザーが追加のサービスを設定できるようにする（デフォルトは空）
-        let additional_services = [];
-        let optionalServices = additional_services.concat(Object.keys(serviceUuidList).map(x => parseInt(x, 16)));
+        const serviceUuid = 0x00FF; // ESP32側で設定したサービスUUID
+        const characteristicUuid = 0xFF01; // ESP32側で設定したキャラクタリスティックUUID
 
         document.getElementById('connect').addEventListener('click', async () => {
             try {
                 document.getElementById('status').textContent = 'Status: Searching for devices...';
-                console.log('Execute : requestDevice');
 
-                // BLEデバイスの選択と接続
+                // デバイスに接続
                 device = await navigator.bluetooth.requestDevice({
-                    acceptAllDevices: true,  // 全てのBLEデバイスを検索対象にする
-                    optionalServices: optionalServices  // 提示されたコードのoptionalServices設定を反映
+                    acceptAllDevices: true,
+                    optionalServices: [serviceUuid]
                 });
 
-                console.log('Connecting to GATT Server...');
                 document.getElementById('status').textContent = `Status: Connecting to ${device.name}`;
-                
-                // GATTサーバーへの接続
                 server = await device.gatt.connect();
-                document.getElementById('status').textContent = `Status: Connected to ${device.name}`;
-                console.log('Connected to GATT Server.');
 
-                // GATTサービスの取得
-                console.log('Execute : getPrimaryServices');
-                const services = await server.getPrimaryServices();
-                console.log('Primary Services:', services);
-
-                // 最初のサービスとキャラクタリスティックを使用（適宜UUID指定を行ってください）
-                const selectedService = services[0];  // 例: 最初に見つかったサービスを選択
-                const characteristics = await selectedService.getCharacteristics();
-                characteristic = characteristics[0];  // 例: 最初のキャラクタリスティックを使用
-                console.log('Characteristic:', characteristic);
-
-                // キャラクタリスティックが通知をサポートしているか確認
-                if (characteristic.properties.notify) {
-                    await notify_enable(characteristic);
-                    console.log('Notifications enabled for characteristic.');
-                } else {
-                    console.warn('Selected characteristic does not support notifications.');
-                }
+                const service = await server.getPrimaryService(serviceUuid);
+                characteristic = await service.getCharacteristic(characteristicUuid);
                 
-            } catch (error) {
-                console.error('Failed to connect or retrieve characteristics: ', error);
-                document.getElementById('status').textContent = 'Status: Failed to connect';
-                // デバイス接続の再試行
-                if (device && device.gatt.connected) {
-                    device.gatt.disconnect(); // 安定して接続できなかった場合の切断
+                // 通知の有効化
+                if (characteristic.properties.notify) {
+                    await characteristic.startNotifications();
+                    characteristic.addEventListener('characteristicvaluechanged', handleCharacteristicValueChanged);
+                    console.log('Notifications enabled');
                 }
+
+                document.getElementById('status').textContent = `Status: Connected to ${device.name}`;
+            } catch (error) {
+                console.error('Failed to connect:', error);
+                document.getElementById('status').textContent = 'Status: Failed to connect';
             }
         });
 
-        // 通知を有効化する関数
-        async function notify_enable(characteristic, forceEnable = false) {
-            try {
-                if (characteristic.notify_enabled && !forceEnable) {
-                    await characteristic.stopNotifications();
-                    console.log('Notifications stopped.');
-                } else {
-                    await characteristic.startNotifications();
-                    console.log('Notifications started.');
-                    characteristic.addEventListener('characteristicvaluechanged', handleCharacteristicValueChanged);
-                }
-            } catch (error) {
-                console.error('Failed to enable notifications:', error);
+        // 読み取りボタンのイベント
+        document.getElementById('read').addEventListener('click', async () => {
+            if (characteristic.properties.read) {
+                const value = await characteristic.readValue();
+                handleCharacteristicValueChanged({ target: { value } });
             }
-        }
+        });
 
-        // データ受信時のイベントハンドラ
+        // 書き込みボタンのイベント
+        document.getElementById('write').addEventListener('click', async () => {
+            const textEncoder = new TextEncoder();
+            const writeValue = textEncoder.encode('Hello ESP32');
+            if (characteristic.properties.write) {
+                await characteristic.writeValue(writeValue);
+                console.log('Data written:', 'Hello ESP32');
+            }
+        });
+
+        // 通知受信時の処理
         function handleCharacteristicValueChanged(event) {
             const value = event.target.value;
-            
-            // 受信データを文字列として読み取る
             let receivedText = '';
             for (let i = 0; i < value.byteLength; i++) {
                 receivedText += String.fromCharCode(value.getUint8(i));
             }
-
-            // コンソールに表示し、ページの要素に受信データを追加
             console.log('Received:', receivedText);
             receivedData += receivedText;
             document.getElementById('data').textContent = `Received Data: ${receivedData}`;
         }
-
-        // デバイスから読み取る処理
-        document.getElementById('read').addEventListener('click', async () => {
-            try {
-                if (characteristic && characteristic.properties.read) {
-                    const value = await characteristic.readValue();
-                    let receivedText = '';
-                    for (let i = 0; i < value.byteLength; i++) {
-                        receivedText += String.fromCharCode(value.getUint8(i));
-                    }
-                    console.log('Read Value:', receivedText);
-                    document.getElementById('data').textContent = `Read Data: ${receivedText}`;
-                } else {
-                    console.warn('Characteristic does not support reading.');
-                }
-            } catch (error) {
-                console.error('Failed to read characteristic:', error);
-            }
-        });
-
-        // デバイスに書き込む処理
-        document.getElementById('write').addEventListener('click', async () => {
-            try {
-                if (characteristic && characteristic.properties.write) {
-                    const encoder = new TextEncoder();
-                    const writeValue = encoder.encode('Hello ESP32');
-                    await characteristic.writeValue(writeValue);
-                    console.log('Written Value: Hello ESP32');
-                } else {
-                    console.warn('Characteristic does not support writing.');
-                }
-            } catch (error) {
-                console.error('Failed to write characteristic:', error);
-            }
-        });
     </script>
 </body>
 </html>
