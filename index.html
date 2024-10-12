@@ -11,7 +11,13 @@
     <button id="read">Read from Characteristic</button>
     <button id="write">Write to Characteristic</button>
     <div id="status">Status: Disconnected</div>
-    <div id="device-info"></div>
+    <div id="deviceInfo">
+        <p><strong>Device Name:</strong> <span id="deviceName">N/A</span></p>
+        <p><strong>UUIDs:</strong></p>
+        <ul id="uuidList"></ul>
+        <p><strong>Characteristics:</strong></p>
+        <ul id="charList"></ul>
+    </div>
     <pre id="data">Received Data: </pre>
     
     <script>
@@ -24,48 +30,47 @@
             try {
                 document.getElementById('status').textContent = 'Status: Searching for devices...';
 
+                // BLEデバイスのスキャン、すべてのデバイスを受け入れる
                 device = await navigator.bluetooth.requestDevice({
                     acceptAllDevices: true,
-                    optionalServices: []  // optionalServicesは空にしておく
+                    optionalServices: []  // 事前にUUIDを指定しない
                 });
 
                 document.getElementById('status').textContent = `Status: Connecting to ${device.name}`;
-                console.log(`Device Name: ${device.name}`);
-                console.log(`Device ID: ${device.id}`);
+                document.getElementById('deviceName').textContent = device.name;
 
                 server = await device.gatt.connect();
                 console.log('Connected to GATT Server');
 
                 // すべてのサービスを取得
                 const services = await server.getPrimaryServices();
-                console.log('Services:', services);
+                const uuidListElement = document.getElementById('uuidList');
+                uuidListElement.innerHTML = ''; // リストをクリア
 
-                let serviceUuid = '';
-                let characteristicUuid = '';
-
+                // 各サービスについて処理
                 for (const service of services) {
-                    serviceUuid = service.uuid;
-                    console.log(`Service UUID: ${serviceUuid}`);
-                    
-                    // サービス内のキャラクタリスティックを取得
+                    const uuidItem = document.createElement('li');
+                    uuidItem.textContent = service.uuid;
+                    uuidListElement.appendChild(uuidItem);
+
+                    // すべてのキャラクタリスティックを取得
                     const characteristics = await service.getCharacteristics();
+                    const charListElement = document.getElementById('charList');
+                    charListElement.innerHTML = ''; // キャラクタリスティックリストをクリア
+
                     for (const char of characteristics) {
-                        characteristicUuid = char.uuid;
-                        console.log(`Characteristic UUID: ${characteristicUuid}`);
-                        characteristic = char;
+                        const charItem = document.createElement('li');
+                        charItem.textContent = `UUID: ${char.uuid}, Properties: ${Object.keys(char.properties).join(', ')}`;
+                        charListElement.appendChild(charItem);
+
+                        // Notify が可能なキャラクタリスティックを保存
+                        if (char.properties.notify) {
+                            characteristic = char;
+                            await characteristic.startNotifications();
+                            characteristic.addEventListener('characteristicvaluechanged', handleCharacteristicValueChanged);
+                            console.log('Notifications enabled for characteristic', char.uuid);
+                        }
                     }
-                }
-
-                document.getElementById('device-info').innerHTML = `
-                    <p><strong>Device Name:</strong> ${device.name}</p>
-                    <p><strong>Service UUID:</strong> ${serviceUuid}</p>
-                    <p><strong>Characteristic UUID:</strong> ${characteristicUuid}</p>
-                `;
-
-                if (characteristic.properties.notify) {
-                    await characteristic.startNotifications();
-                    characteristic.addEventListener('characteristicvaluechanged', handleCharacteristicValueChanged);
-                    console.log('Notifications enabled');
                 }
 
                 document.getElementById('status').textContent = `Status: Connected to ${device.name}`;
@@ -77,7 +82,7 @@
 
         document.getElementById('read').addEventListener('click', async () => {
             try {
-                if (characteristic.properties.read) {
+                if (characteristic && characteristic.properties.read) {
                     const value = await characteristic.readValue();
                     handleCharacteristicValueChanged({ target: { value } });
                     console.log('Data read successfully');
@@ -91,7 +96,7 @@
             try {
                 const textEncoder = new TextEncoder();
                 const writeValue = textEncoder.encode('Hello ESP32');
-                if (characteristic.properties.write) {
+                if (characteristic && characteristic.properties.write) {
                     await characteristic.writeValue(writeValue);
                     console.log('Data written:', 'Hello ESP32');
                 }
