@@ -11,6 +11,7 @@
     <button id="read">Read from Characteristic</button>
     <button id="write">Write to Characteristic</button>
     <div id="status">Status: Disconnected</div>
+    <div id="device-info"></div>
     <pre id="data">Received Data: </pre>
     
     <script>
@@ -19,16 +20,13 @@
         let device;
         let server;
 
-        const serviceUuid = '0000ff00-0000-1000-8000-00805f9b34fb'; // 修正されたサービスUUID
-        const characteristicUuid = '0000ff01-0000-1000-8000-00805f9b34fb'; // 修正されたキャラクタリスティックUUID
-
         document.getElementById('connect').addEventListener('click', async () => {
             try {
                 document.getElementById('status').textContent = 'Status: Searching for devices...';
 
                 device = await navigator.bluetooth.requestDevice({
                     acceptAllDevices: true,
-                    optionalServices: [serviceUuid]
+                    optionalServices: []  // optionalServicesは空にしておく
                 });
 
                 document.getElementById('status').textContent = `Status: Connecting to ${device.name}`;
@@ -38,11 +36,31 @@
                 server = await device.gatt.connect();
                 console.log('Connected to GATT Server');
 
-                const service = await server.getPrimaryService(serviceUuid);
-                console.log('Primary Service:', service);
+                // すべてのサービスを取得
+                const services = await server.getPrimaryServices();
+                console.log('Services:', services);
 
-                characteristic = await service.getCharacteristic(characteristicUuid);
-                console.log('Characteristic:', characteristic);
+                let serviceUuid = '';
+                let characteristicUuid = '';
+
+                for (const service of services) {
+                    serviceUuid = service.uuid;
+                    console.log(`Service UUID: ${serviceUuid}`);
+                    
+                    // サービス内のキャラクタリスティックを取得
+                    const characteristics = await service.getCharacteristics();
+                    for (const char of characteristics) {
+                        characteristicUuid = char.uuid;
+                        console.log(`Characteristic UUID: ${characteristicUuid}`);
+                        characteristic = char;
+                    }
+                }
+
+                document.getElementById('device-info').innerHTML = `
+                    <p><strong>Device Name:</strong> ${device.name}</p>
+                    <p><strong>Service UUID:</strong> ${serviceUuid}</p>
+                    <p><strong>Characteristic UUID:</strong> ${characteristicUuid}</p>
+                `;
 
                 if (characteristic.properties.notify) {
                     await characteristic.startNotifications();
