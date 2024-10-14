@@ -121,6 +121,11 @@
         }
       },
       ble_connect: async function () {
+          if (!this.ble_target_serviceuuid) {
+            alert('Service UUIDを入力してください。');
+            return;
+          }
+
         try {
           this.ble_disconnect();
           var additional_services = [];
