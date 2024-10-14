@@ -213,4 +213,30 @@
             await characteristic.characteristic.writeValueWithResponse(array);
           }
         } catch (error) {
-         
+          console.error(error);
+        }
+      },
+      dataview2hex: function (data) {
+        return Array.from(new Uint8Array(data.buffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+      },
+      hex2array: function (hex) {
+        return new Uint8Array(hex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+      },
+      uuid128touuid16: function (uuid128) {
+        var baseUuid = "00000000-0000-1000-8000-00805f9b34fb";
+        if (uuid128.length == 36 && uuid128.endsWith(baseUuid.slice(8))) {
+          return parseInt(uuid128.slice(0, 8), 16).toString(16);
+        }
+        return uuid128;
+      },
+      find_service_name: function (uuid) {
+        return this.uuid128touuid16(uuid);
+      },
+      find_characteristic_name: function (uuid) {
+        return this.uuid128touuid16(uuid);
+      },
+    }
+  });
+</script>
+</body>
+</html>
