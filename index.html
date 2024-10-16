@@ -65,6 +65,19 @@
       </div>
     </div>
   </div>
+    <!-- モーダルの定義 -->
+<div class="modal fade" id="progress" tabindex="-1" aria-labelledby="progressLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="progressLabel">{{ progress_title }}</h5>
+      </div>
+      <div class="modal-body">
+        処理中です。お待ちください...
+      </div>
+    </div>
+  </div>
+</div>
 </div>
 
 <script>
@@ -374,6 +387,7 @@
         ble_isConnected: false,
         ble_additional_services: '',
         ble_target_serviceuuid: "",
+        progress_title: "少々お待ちください。" // 追加
       }
     },
       methods: {
