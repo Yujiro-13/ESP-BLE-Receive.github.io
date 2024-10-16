@@ -340,6 +340,30 @@
   };
   var decoder = new TextDecoder('utf-8');
 
+     const methods_bootstrap = {
+    dialog_open: function(target, backdrop = 'static'){
+        const element = document.querySelector(target);
+        let modal = bootstrap.Modal.getInstance(element);
+        if( !modal )
+            modal = new bootstrap.Modal(element, { backdrop: backdrop, keyboard: false });
+        modal.show();
+    },
+    dialog_close: function(target){
+        const element = document.querySelector(target);
+        let modal = bootstrap.Modal.getInstance(element);
+        if( modal )
+            modal.hide();
+    },
+    toast_show: function(message, level = "success"){
+        if( level == 'message' )
+            siiimpleToast.message(message, { position: 'top|right' });
+        else if( level == 'alert' )
+            siiimpleToast.alert(message, { position: 'top|right' });
+        else
+            siiimpleToast.success(message, { position: 'top|right' });
+    },
+  };
+
   new Vue({
     el: '#app',
     data: function () {
@@ -576,6 +600,15 @@
       if (!name)
         return ('0000' + uuid16.toString(16)).slice(-4).toUpperCase();
       return name;
+    },
+    
+    /* プログレス表示 */
+    progress_open: function (title = '少々お待ちください。', backdrop = 'static') {
+      this.$root.progress_title = title;
+      methods_bootstrap.dialog_open('#progress', backdrop);
+    },
+    progress_close: function () {
+      methods_bootstrap.dialog_close('#progress');
     },
   }
   });
