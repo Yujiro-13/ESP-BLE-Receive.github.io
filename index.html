@@ -407,7 +407,7 @@
           }
         }
       }
-      this.toast_show("All startNotificationしました。");
+      methods_bootstrap.toast_show("All startNotificationしました。");
     },
     ble_allread: async function () {
       for (var i = 0; i < this.ble_services.length; i++) {
@@ -481,7 +481,7 @@
         }
         this.ble_services = list;
         this.ble_isConnected = true;
-        this.toast_show("接続しました。");
+        methods_bootstrap.toast_show("接続しました。");
       } catch (error) {
         console.error(error);
         alert(error);
