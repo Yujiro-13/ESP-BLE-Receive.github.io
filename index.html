@@ -11,14 +11,27 @@
   <script src="https://cdn.jsdelivr.net/npm/siiimple-toast/dist/siiimple-toast.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
   <script src="uuidlLists.js"></script>
+  <style>
+    .center-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 10vh;
+    }
+    .center-content {
+      width: 100%;
+      max-width: 700px;
+    }
+  </style>
 </head>
 
 <body>
-  <div id="app">
-    <div>
-      <h2 class="modal-header">ESP-BLE-Receive</h2>
-      <button class="btn btn-primary" v-on:click="ble_connect()" v-if="!ble_isConnected">Connect</button>
-      <button class="btn btn-primary" v-on:click="ble_disconnect()" v-else>Disconnect</button>
+  <div id="app" class="center-container">
+    <div class="center-content">
+      <h2 class="modal-header text-center">ESP-BLE-Receive</h2>
+      <button class="btn btn-primary w-10" v-on:click="ble_connect()" v-if="!ble_isConnected">Connect</button>
+      <button class="btn btn-primary w-10" v-on:click="ble_disconnect()" v-else>Disconnect</button>
       <br><br>
       <label class="title">ServiceUUID</label>
       <input type="text" class="form-control" v-model="ble_target_serviceuuid"><br>
@@ -37,8 +50,8 @@
         <label class="title">name</label> {{ble_device.name}}<br>
       </div>
 
-      <button class="btn btn-secondary" v-on:click="ble_allread()" v-if="ble_isConnected">All Read</button>
-      <button class="btn btn-secondary" v-on:click="ble_allnotify()" v-if="ble_isConnected">All Notify</button>
+      <button class="btn btn-secondary w-100" v-on:click="ble_allread()" v-if="ble_isConnected">All Read</button>
+      <button class="btn btn-secondary w-100" v-on:click="ble_allnotify()" v-if="ble_isConnected">All Notify</button>
       <br><br>
 
       <div class="card m-3" v-for="(service, index) in ble_services">
@@ -131,7 +144,7 @@
           ble_additional_services: '',
           ble_target_serviceuuid: "",
           progress_title: "少々お待ちください。",
-          isAdditionalServicesVisible: true,
+          isAdditionalServicesVisible: false,
           ble_additional_services: ''
         }
       },
